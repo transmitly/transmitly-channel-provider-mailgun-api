@@ -1,9 +1,10 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36310.24 d17.14
+# Visual Studio Version 18
+VisualStudioVersion = 18.3.11408.92 d18.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Transmitly.ChannelProvider.Mailgun.Api", "src\Transmitly.ChannelProvider.Mailgun.Api\Transmitly.ChannelProvider.Mailgun.Api.csproj", "{13704309-AF88-46DF-9381-FCE675E2BBF7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Transmitly.ChannelProvider.Mailgun.Api.Tests", "tests\Transmitly.ChannelProvider.Mailgun.Api.Tests\Transmitly.ChannelProvider.Mailgun.Api.Tests.csproj", "{A11C5E64-3520-43B9-9E42-7F323373AC68}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +16,10 @@ Global
 		{13704309-AF88-46DF-9381-FCE675E2BBF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{13704309-AF88-46DF-9381-FCE675E2BBF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{13704309-AF88-46DF-9381-FCE675E2BBF7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A11C5E64-3520-43B9-9E42-7F323373AC68}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A11C5E64-3520-43B9-9E42-7F323373AC68}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A11C5E64-3520-43B9-9E42-7F323373AC68}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A11C5E64-3520-43B9-9E42-7F323373AC68}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -16,11 +16,8 @@ using System.Text.Json.Serialization;
 
 namespace Transmitly.ChannelProvider.Mailgun.Api.Email
 {
-	internal sealed class MailgunSendResponse
+	internal sealed class MailgunErrorResponse
 	{
-		[JsonPropertyName("id")]
-		public string? Id { get; set; }
-
 		[JsonPropertyName("message")]
 		public string? Message { get; set; }
 	}

@@ -37,6 +37,14 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Email
 			Guard.AgainstNullOrWhiteSpace(_options.SendingDomain);
 		}
 
+		internal EmailChannelProviderDispatcher(MailgunOptions mailgunOptions, HttpClient httpClient)
+			: base(Guard.AgainstNull(httpClient))
+		{
+			_options = Guard.AgainstNull(mailgunOptions);
+			Guard.AgainstNullOrWhiteSpace(_options.ApiKey);
+			Guard.AgainstNullOrWhiteSpace(_options.SendingDomain);
+		}
+
 		protected override void ConfigureHttpClient(HttpClient httpClient)
 		{
 			RestClientConfiguration.Configure(httpClient, _options);
@@ -54,7 +62,11 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Email
 				.PostAsync(SendMessagePath, await CreateMessageContent(email, communicationContext).ConfigureAwait(false), cancellationToken)
 				.ConfigureAwait(false);
 
+#if NETFRAMEWORK || NETSTANDARD2_0
 			var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+#else
+			var responseContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+#endif
 			var result = new MailgunDispatchResult
 			{
 				Status = response.IsSuccessStatusCode

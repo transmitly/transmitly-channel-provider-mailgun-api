@@ -1,4 +1,4 @@
-// Copyright (c) Code Impressions, LLC. All Rights Reserved.
+﻿// Copyright (c) Code Impressions, LLC. All Rights Reserved.
 //  
 //  Licensed under the Apache License, Version 2.0 (the "License")
 //  you may not use this file except in compliance with the License.
@@ -12,16 +12,4 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-using System.Text.Json.Serialization;
-
-namespace Transmitly.ChannelProvider.Mailgun.Api.Email
-{
-	internal sealed class MailgunSendResponse
-	{
-		[JsonPropertyName("id")]
-		public string? Id { get; set; }
-
-		[JsonPropertyName("message")]
-		public string? Message { get; set; }
-	}
-}
+[assembly: Parallelize(Scope = ExecutionScope.MethodLevel)]

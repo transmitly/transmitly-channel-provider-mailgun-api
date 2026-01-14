@@ -16,16 +16,9 @@ using System;
 
 namespace Transmitly.ChannelProvider.Mailgun.Api
 {
-	public sealed class MailgunException : Exception
+	public sealed class MailgunException(string message, int? statusCode = null, string? responseBody = null, Exception? innerException = null) : Exception(message, innerException)
 	{
-		public int? StatusCode { get; }
-		public string? ResponseBody { get; }
-
-		public MailgunException(string message, int? statusCode = null, string? responseBody = null, Exception? innerException = null)
-			: base(message, innerException)
-		{
-			StatusCode = statusCode;
-			ResponseBody = responseBody;
-		}
+		public int? StatusCode { get; } = statusCode;
+		public string? ResponseBody { get; } = responseBody;
 	}
 }
