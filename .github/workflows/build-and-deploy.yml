@@ -7,12 +7,12 @@ on:
     branches:
      - "main"
     paths:
-      - "src/Transmitly.ChannelProvider..Mailgun.Api/**"
+      - "src/Transmitly.ChannelProvider.Mailgun.Api/**"
 jobs:
   build_test_deploy_channel_provider:
     uses: transmitly/transmitly/.github/workflows/build-and-deploy-channel-provider.yml@main
     with: 
-      channelProviderName: Transmitly.ChannelProvider..Mailgun.Api
+      channelProviderName: Transmitly.ChannelProvider.Mailgun.Api
       runTests: true
     secrets: inherit
 
