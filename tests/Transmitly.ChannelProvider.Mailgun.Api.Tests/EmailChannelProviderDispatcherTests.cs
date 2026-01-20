@@ -160,6 +160,51 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Tests
 		}
 
 		[TestMethod]
+		public async Task DispatchAsync_WithDkimAndSendingIp_SendsExpectedFields()
+		{
+			var handler = new TestHttpMessageHandler
+			{
+				StatusCode = HttpStatusCode.OK,
+				ResponseBody = "{\"id\":\"<test>\",\"message\":\"Queued\"}"
+			};
+			var client = new HttpClient(handler);
+			var options = new MailgunOptions
+			{
+				ApiKey = "key-test",
+				SendingDomain = "mg.example.com",
+				ApiHost = "https://api.mailgun.test"
+			};
+			var dispatcher = new EmailChannelProviderDispatcher(options, client);
+
+			var extendedProperties = new ExtendedProperties();
+			_ = new EmailExtendedChannelProperties(extendedProperties)
+			{
+				DKIMSignatures = true,
+				SecondaryDKIM = "secondary-dkim",
+				PublicSecondaryDKIM = "public-secondary-dkim",
+				SendingIp = "192.168.1.10"
+			};
+
+			var email = new TestEmail
+			{
+				From = new PlatformIdentityAddress("from@example.com"),
+				To = [new PlatformIdentityAddress("to@example.com")],
+				Subject = "Hello",
+				TextBody = "Hello text",
+				ExtendedProperties = extendedProperties
+			};
+
+			var context = new TestDispatchCommunicationContext();
+			await dispatcher.DispatchAsync(email, context, CancellationToken.None);
+
+			var parts = MultipartFormDataParser.Parse(handler.CapturedContentType, handler.CapturedContent);
+			AssertFieldValue(parts, "o:dkim", "yes");
+			AssertFieldValue(parts, "o:secondary-dkim", "secondary-dkim");
+			AssertFieldValue(parts, "o:secondary-dkim-public", "public-secondary-dkim");
+			AssertFieldValue(parts, "o:sending-ip", "192.168.1.10");
+		}
+
+		[TestMethod]
 		public async Task DispatchAsync_WhenNoRecipients_ThrowsMailgunException()
 		{
 			var dispatcher = CreateDispatcher();

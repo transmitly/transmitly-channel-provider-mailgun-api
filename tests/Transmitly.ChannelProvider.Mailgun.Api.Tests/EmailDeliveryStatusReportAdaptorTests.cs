@@ -12,10 +12,6 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Transmitly;
 using Transmitly.ChannelProvider.Mailgun.Api.Email;
 using Transmitly.ChannelProvider.Mailgun.Configuration;
 using Transmitly.Delivery;
