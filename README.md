@@ -1,20 +1,23 @@
-# Transmitly.ChannelProvider.Mailgun.Api
+﻿# Transmitly.ChannelProvider.Mailgun.Api
 
-A [Transmitly](https://github.com/transmitly/transmitly) Mailgun channel provider dispatcher implementation for email and Mailgun delivery-report adaptation.
+Mailgun HTTP API-based email dispatcher implementation for [Transmitly](https://github.com/transmitly/transmitly).
 
 ## Recommended Package
 
-Most users should use the convenience package:
+Most users should use the convenience package instead:
 
-- [transmitly-channel-provider-mailgun](https://github.com/transmitly/transmitly-channel-provider-mailgun)
+- [Transmitly.ChannelProvider.Mailgun](https://github.com/transmitly/transmitly-channel-provider-mailgun)
 
-It provides `AddMailgunSupport(...)` and registers this dispatcher for you.
+That package registers this API implementation for you.
+
+## What This Package Provides
+
+- `EmailChannelProviderDispatcher` for the `Email` channel.
+- `EmailDeliveryStatusReportAdaptor` for Mailgun webhook payloads.
+- `EmailExtendedChannelProperties` for Mailgun-specific email settings.
+- `DeliveryReportExtendedProperties` for Mailgun-specific delivery-report access.
 
 ## Using This Package Directly (Advanced)
-
-Use this package directly if you want explicit control over channel-provider registration and dispatcher wiring.
-
-The convenience package registers this provider with the equivalent of:
 
 ```csharp
 using Transmitly;
@@ -27,13 +30,10 @@ var builder = new CommunicationsClientBuilder();
 var options = new MailgunOptions
 {
 	ApiKey = "key-your-mailgun-api-key",
-	SendingDomain = "mg.example.com",
-	// Optional for EU-region Mailgun accounts.
-	// ApiHost = "https://api.eu.mailgun.net"
+	SendingDomain = "mg.example.com"
 };
 
-builder
-	.ChannelProvider
+builder.ChannelProvider
 	.Build(Id.ChannelProvider.Mailgun(), options)
 	.AddDispatcher<EmailChannelProviderDispatcher, IEmail>(Id.Channel.Email())
 	.AddEmailExtendedPropertiesAdaptor<EmailExtendedChannelProperties>()
@@ -42,7 +42,11 @@ builder
 	.Register();
 ```
 
-See the [Transmitly](https://github.com/transmitly/transmitly) project for pipeline/channel concepts and end-to-end setup.
+## Related Packages
+
+- [Transmitly](https://github.com/transmitly/transmitly)
+- [Transmitly.ChannelProvider.Mailgun](https://github.com/transmitly/transmitly-channel-provider-mailgun)
+- [Transmitly.ChannelProvider.Mailgun.Configuration](https://github.com/transmitly/transmitly-channel-provider-mailgun-configuration)
 
 ---
 _Copyright (c) Code Impressions, LLC. This open-source project is sponsored and maintained by Code Impressions and is licensed under the [Apache License, Version 2.0](http://apache.org/licenses/LICENSE-2.0.html)._
