@@ -233,29 +233,6 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Email
 			return null;
 		}
 
-		private static int? GetInt(JsonElement element, string objectName, string childName, string propertyName)
-		{
-			if (element.ValueKind != JsonValueKind.Object)
-				return null;
-
-			if (!element.TryGetProperty(objectName, out var child))
-				return null;
-
-			if (!child.TryGetProperty(childName, out var grandChild))
-				return null;
-
-			if (grandChild.ValueKind == JsonValueKind.Object && grandChild.TryGetProperty(propertyName, out var property))
-			{
-				if (property.ValueKind == JsonValueKind.Number && property.TryGetInt32(out var number))
-					return number;
-
-				if (property.ValueKind == JsonValueKind.String && int.TryParse(property.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
-					return parsed;
-			}
-
-			return null;
-		}
-
 		private static double? GetDouble(JsonElement element, string objectName, string propertyName)
 		{
 			if (element.ValueKind != JsonValueKind.Object)
