@@ -21,6 +21,7 @@ using Transmitly.Channel.Configuration;
 using Transmitly.ChannelProvider.Mailgun.Api.Email;
 using Transmitly.ChannelProvider.Mailgun.Configuration;
 using Transmitly.Delivery;
+using Transmitly.Logging;
 using Transmitly.Pipeline.Configuration;
 using Transmitly.Template.Configuration;
 
@@ -307,6 +308,8 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Tests
 			public ITemplateEngine TemplateEngine { get; } = new TestTemplateEngine();
 			public string PipelineIntent { get; } = "test";
 			public string? PipelineId { get; } = "pipeline";
+
+			public ILoggerFactory LoggerFactory => new TestLoggerFactory();
 		}
 
 		private sealed class TestDeliveryReportService : IDeliveryReportService
@@ -360,6 +363,28 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Tests
 			public override Task<IDispatchCommunicationResult> DispatchAsync(IReadOnlyCollection<RecipientDispatchCommunicationContext> sendingGroups, CancellationToken cancellationToken)
 			{
 				throw new NotImplementedException();
+			}
+		}
+		private sealed class TestLogger : ILogger
+		{
+			public string CategoryName => "Test Category";
+
+			public bool IsEnabled(LogLevel level)
+			{
+				return true;
+			}
+
+			public void Log(LogEntry entry)
+			{
+				
+			}
+		}
+
+		private sealed class TestLoggerFactory : ILoggerFactory
+		{
+			public ILogger CreateLogger(string categoryName)
+			{
+				return new TestLogger();
 			}
 		}
 
