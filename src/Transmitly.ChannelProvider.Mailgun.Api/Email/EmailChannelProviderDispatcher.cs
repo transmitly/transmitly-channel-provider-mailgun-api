@@ -12,8 +12,10 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -90,15 +92,20 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Email
 			return [result];
 		}
 
+		// Dispatchers can be created per dispatch; one handler (connection pool) per proxy keeps sockets from leaking.
+		private static readonly ConcurrentDictionary<IWebProxy, HttpMessageHandler> _proxyHandlers = new();
+
 		private static HttpClient? CreateHttpClient(MailgunOptions? options)
 		{
 			if (options?.WebProxy == null)
 				return null;
 
-			return new HttpClient(new HttpClientHandler
+			var handler = _proxyHandlers.GetOrAdd(options.WebProxy, proxy => new HttpClientHandler
 			{
-				Proxy = options.WebProxy
+				Proxy = proxy,
+				UseCookies = false
 			});
+			return new HttpClient(handler, disposeHandler: false);
 		}
 
 		private static async Task<HttpContent> CreateMessageContent(IEmail email, IDispatchCommunicationContext context)
