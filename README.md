@@ -38,7 +38,7 @@ builder.ChannelProvider
 	.AddDispatcher<EmailChannelProviderDispatcher, IEmail>(Id.Channel.Email())
 	.AddEmailExtendedPropertiesAdaptor<EmailExtendedChannelProperties>()
 	.AddDeliveryReportRequestAdaptor<EmailDeliveryStatusReportAdaptor>()
-	.AddDeliveryReportExtendedProprtiesAdaptor<DeliveryReportExtendedProperties>()
+	.AddDeliveryReportExtendedPropertiesAdaptor<DeliveryReportExtendedProperties>()
 	.Register();
 ```
 
