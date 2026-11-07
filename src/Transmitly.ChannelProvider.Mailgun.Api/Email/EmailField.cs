@@ -40,5 +40,6 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Email
 		public const string ReplyTo = "h:Reply-To";
 		public const string TemplateVariables = "h:X-Mailgun-Variables";
 		public const string Attachment = "attachment";
+		public const string Inline = "inline";
 	}
 }

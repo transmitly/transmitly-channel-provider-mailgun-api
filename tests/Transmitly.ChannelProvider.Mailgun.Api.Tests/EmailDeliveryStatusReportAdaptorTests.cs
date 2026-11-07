@@ -33,7 +33,7 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Tests
 			context.Query[DeliveryUtil.ChannelIdKey] = Id.Channel.Email();
 			context.Query[DeliveryUtil.ChannelProviderIdKey] = MailgunConstant.Id;
 
-			var adaptor = new EmailDeliveryStatusReportAdaptor();
+			var adaptor = new EmailDeliveryStatusReportAdaptor(new MailgunOptions { ValidateDeliveryReportSignature = false });
 			var reports = await adaptor.AdaptAsync(context);
 
 			Assert.IsNotNull(reports);
@@ -47,6 +47,10 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Tests
 			Assert.AreEqual("delivery", report.PipelineIntent);
 			Assert.AreEqual("pipeline-1", report.PipelineId);
 			Assert.IsTrue(report.Status.Code is >= CommunicationsStatus.SuccessMin and <= CommunicationsStatus.SuccessMax);
+
+			// Readable with nothing registered.
+			Assert.AreEqual("delivered", report.Mailgun().Email.Event);
+			Assert.AreEqual(250, report.Mailgun().Email.DeliveryStatusCode);
 		}
 
 		[TestMethod]
@@ -64,7 +68,7 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Tests
 			context.Form["code"] = "550";
 			context.Form["message"] = "bounce";
 
-			var adaptor = new EmailDeliveryStatusReportAdaptor();
+			var adaptor = new EmailDeliveryStatusReportAdaptor(new MailgunOptions { ValidateDeliveryReportSignature = false });
 			var reports = await adaptor.AdaptAsync(context);
 
 			Assert.IsNotNull(reports);
@@ -83,10 +87,35 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Tests
 			context.Query[DeliveryUtil.ChannelIdKey] = Id.Channel.Email();
 			context.Query[DeliveryUtil.ChannelProviderIdKey] = "OtherProvider";
 
-			var adaptor = new EmailDeliveryStatusReportAdaptor();
+			var adaptor = new EmailDeliveryStatusReportAdaptor(new MailgunOptions { ValidateDeliveryReportSignature = false });
 			var reports = await adaptor.AdaptAsync(context);
 
 			Assert.IsNull(reports);
+		}
+
+		[TestMethod]
+		public async Task AdaptAsync_ValidatesSignature()
+		{
+			const string key = "signing-key";
+			string Payload(string signature) => "{\"signature\":{\"timestamp\":\"1700000000\",\"token\":\"abc123\",\"signature\":\"" + signature + "\"},\"event-data\":{\"event\":\"delivered\"}}";
+			string Sign()
+			{
+				using var hmac = new System.Security.Cryptography.HMACSHA256(System.Text.Encoding.UTF8.GetBytes(key));
+				return BitConverter.ToString(hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes("1700000000abc123"))).Replace("-", "").ToLowerInvariant();
+			}
+			TestRequestAdaptorContext Context(string content)
+			{
+				var context = new TestRequestAdaptorContext { Content = content };
+				context.Query[DeliveryUtil.ChannelIdKey] = Id.Channel.Email();
+				context.Query[DeliveryUtil.ChannelProviderIdKey] = MailgunConstant.Id;
+				return context;
+			}
+
+			var adaptor = new EmailDeliveryStatusReportAdaptor(new MailgunOptions { WebhookSigningKey = key });
+
+			Assert.IsNotNull(await adaptor.AdaptAsync(Context(Payload(Sign()))));
+			await Assert.ThrowsExactlyAsync<DeliveryReportRequestValidationException>(() => adaptor.AdaptAsync(Context(Payload(new string('0', 64)))));
+			await Assert.ThrowsExactlyAsync<DeliveryReportRequestValidationException>(() => new EmailDeliveryStatusReportAdaptor(new MailgunOptions()).AdaptAsync(Context(Payload(Sign()))));
 		}
 
 		private sealed class TestRequestAdaptorContext : IRequestAdaptorContext
@@ -96,6 +125,7 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Tests
 			public Dictionary<string, string> Headers { get; } = new(StringComparer.OrdinalIgnoreCase);
 
 			public string? Content { get; set; }
+			public string? RequestUrl { get; set; }
 			public string? PipelineIntent { get; set; }
 			public string? PipelineId { get; set; }
 			public string? ResourceId { get; set; }
@@ -117,7 +147,7 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Tests
 
 			public string? GetValue(string key)
 			{
-				return GetQueryValue(key) ?? GetFormValue(key) ?? GetHeaderValue(key);
+				throw new System.NotSupportedException("The ASP.NET hosts throw here; use GetQueryValue, GetFormValue or GetHeaderValue.");
 			}
 		}
 	}

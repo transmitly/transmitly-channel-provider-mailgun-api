@@ -14,14 +14,21 @@
 
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using Transmitly.ChannelProvider.Mailgun.Configuration;
 using Transmitly.Delivery;
+using Transmitly.Util;
 
 namespace Transmitly.ChannelProvider.Mailgun.Api.Email
 {
-	public sealed class EmailDeliveryStatusReportAdaptor : IChannelProviderDeliveryReportRequestAdaptor
+	/// <param name="mailgunOptions">Mailgun options.</param>
+	public sealed class EmailDeliveryStatusReportAdaptor(MailgunOptions mailgunOptions) : IChannelProviderDeliveryReportRequestAdaptor
 	{
+		private readonly MailgunOptions _mailgunOptions = Guard.AgainstNull(mailgunOptions);
+
+		/// <exception cref="DeliveryReportRequestValidationException">The request is a Mailgun webhook but its signature is invalid.</exception>
 		public Task<IReadOnlyCollection<DeliveryReport>?> AdaptAsync(IRequestAdaptorContext adaptorContext)
 		{
 			if (!ShouldAdapt(adaptorContext))
@@ -30,6 +37,8 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Email
 			var payload = ParsePayload(adaptorContext);
 			if (payload == null)
 				return Task.FromResult<IReadOnlyCollection<DeliveryReport>?>(null);
+
+			ValidateSignature(payload);
 
 			var detail = payload.DeliveryMessage ?? payload.DeliveryReason ?? payload.DeliveryDescription;
 			var report = new DeliveryReport(
@@ -61,6 +70,37 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Email
 				(providerId?.StartsWith(MailgunConstant.Id, StringComparison.InvariantCultureIgnoreCase) ?? false);
 		}
 
+		// https://documentation.mailgun.com/docs/mailgun/user-manual/webhooks/securing-webhooks
+		// hex(HMAC-SHA256(signingKey, timestamp + token)) == signature
+		private void ValidateSignature(MailgunEmailWebhookEvent payload)
+		{
+			if (!_mailgunOptions.ValidateDeliveryReportSignature)
+				return;
+			if (string.IsNullOrWhiteSpace(_mailgunOptions.WebhookSigningKey))
+				throw new DeliveryReportRequestValidationException("Mailgun WebhookSigningKey is required to validate webhooks.");
+
+			using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(_mailgunOptions.WebhookSigningKey));
+			var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(payload.SignatureTimestamp + payload.SignatureToken));
+#if NET9_0_OR_GREATER
+			var expected = Convert.ToHexStringLower(hash);
+#else
+			var expected = BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
+#endif
+			if (payload.SignatureTimestamp == null || payload.SignatureToken == null || !FixedTimeEquals(expected, payload.SignatureValue?.ToLowerInvariant()))
+				throw new DeliveryReportRequestValidationException("Mailgun webhook signature is invalid.");
+		}
+
+		// CryptographicOperations.FixedTimeEquals isn't available on netstandard2.0/net4x.
+		private static bool FixedTimeEquals(string expected, string? actual)
+		{
+			if (actual == null || actual.Length != expected.Length)
+				return false;
+			var diff = 0;
+			for (var i = 0; i < expected.Length; i++)
+				diff |= expected[i] ^ actual[i];
+			return diff == 0;
+		}
+
 		private static MailgunEmailWebhookEvent? ParsePayload(IRequestAdaptorContext adaptorContext)
 		{
 			if (!string.IsNullOrWhiteSpace(adaptorContext.Content))
@@ -77,10 +117,7 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Email
 		{
 			return adaptorContext.GetQueryValue(key)
 				?? adaptorContext.GetFormValue(key)
-				?? adaptorContext.GetHeaderValue(key)
-#pragma warning disable CS0618
-				?? adaptorContext.GetValue(key);
-#pragma warning restore CS0618
+				?? adaptorContext.GetHeaderValue(key);
 		}
 
 		private static CommunicationsStatus ConvertStatus(string? eventName, int? deliveryCode, string? detail)

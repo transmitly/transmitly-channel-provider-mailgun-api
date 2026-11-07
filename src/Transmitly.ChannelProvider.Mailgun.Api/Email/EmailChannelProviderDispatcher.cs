@@ -12,8 +12,10 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -110,7 +112,7 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Email
 
 		private static async Task<HttpContent> CreateMessageContent(IEmail email, IDispatchCommunicationContext context)
 		{
-			var emailProperties = new EmailExtendedChannelProperties(email.ExtendedProperties);
+			var emailProperties = email.Mailgun();
 			var hasTemplate = !string.IsNullOrWhiteSpace(emailProperties.Template);
 			var form = new MultipartFormDataContent();
 
@@ -145,7 +147,7 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Email
 			AddReplyTo(form, email.ReplyTo);
 			AddTemplateVariables(form, context);
 			AddProperties(form, emailProperties.Properties);
-			AddAttachments(form, email.Attachments);
+			await AddAttachmentsAsync(form, email.Attachments, context.ContentModel?.LinkedResources).ConfigureAwait(false);
 
 			return form;
 		}
@@ -179,7 +181,7 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Email
 			}
 		}
 
-		private static async Task TryAddAmpContent(IEmail email, IDispatchCommunicationContext context, MultipartFormDataContent form, EmailExtendedChannelProperties emailProperties)
+		private static async Task TryAddAmpContent(IEmail email, IDispatchCommunicationContext context, MultipartFormDataContent form, IEmailExtendedChannelProperties emailProperties)
 		{
 			var ampTemplate = emailProperties.AmpHtml.GetTemplateRegistration(context.CultureInfo, false);
 			if (ampTemplate == null)
@@ -261,27 +263,40 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Email
 			}
 		}
 
-		private static void AddAttachments(MultipartFormDataContent form, IReadOnlyCollection<IEmailAttachment> attachments)
+		private static async Task AddAttachmentsAsync(MultipartFormDataContent form, IReadOnlyCollection<IEmailAttachment>? attachments, IReadOnlyList<LinkedResource>? linkedResources)
 		{
-			if (attachments == null || attachments.Count == 0)
-				return;
-
 			var index = 0;
-			foreach (var attachment in attachments)
+			foreach (var attachment in attachments ?? [])
 			{
 				if (attachment?.ContentStream == null)
 					continue;
 
-				var fileName = string.IsNullOrWhiteSpace(attachment.Name) ? $"attachment-{++index}" : attachment.Name;
-				var content = new StreamContent(attachment.ContentStream);
-
-				if (!string.IsNullOrWhiteSpace(attachment.ContentType))
-				{
-					content.Headers.ContentType = MediaTypeHeaderValue.Parse(attachment.ContentType);
-				}
-
-				form.Add(content, EmailField.Attachment, fileName);
+				var fileName = string.IsNullOrWhiteSpace(attachment.Name) ? $"attachment-{++index}" : attachment.Name!;
+				form.Add(await FileContentAsync(attachment.ContentStream, attachment.ContentType).ConfigureAwait(false), EmailField.Attachment, fileName);
 			}
+
+			foreach (var resource in linkedResources ?? [])
+			{
+				// Mailgun matches HTML's cid:<name> against the inline file's name; accept ids given with or without that prefix.
+				var contentId = resource.Id.StartsWith("cid:", StringComparison.OrdinalIgnoreCase) ? resource.Id[4..] : resource.Id;
+				form.Add(await FileContentAsync(resource.ContentStream, resource.ContentType).ConfigureAwait(false), EmailField.Inline, contentId);
+			}
+		}
+
+		private static async Task<HttpContent> FileContentAsync(Stream? stream, string? contentType)
+		{
+			Guard.AgainstNull(stream);
+			// Every recipient's email shares the same resource streams: read each from the start, and copy it
+			// so disposing the request (which .NET Framework's HttpClient does) can't close the caller's stream.
+			if (stream!.CanSeek)
+				stream.Position = 0;
+			using var buffer = new MemoryStream();
+			await stream.CopyToAsync(buffer).ConfigureAwait(false);
+
+			var content = new ByteArrayContent(buffer.ToArray());
+			if (!string.IsNullOrWhiteSpace(contentType))
+				content.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
+			return content;
 		}
 
 		private static T? TryDeserialize<T>(string content)

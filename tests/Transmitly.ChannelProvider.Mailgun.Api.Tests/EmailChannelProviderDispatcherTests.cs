@@ -49,11 +49,9 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Tests
 			var dispatcher = new EmailChannelProviderDispatcher(options, client);
 
 			var extendedProperties = new ExtendedProperties();
-			_ = new EmailExtendedChannelProperties(extendedProperties)
-			{
-				Template = "welcome",
-				TemplateVersion = "v1"
-			};
+			var mailgun = MailgunProperties(extendedProperties);
+			mailgun.Template = "welcome";
+			mailgun.TemplateVersion = "v1";
 
 			var email = new TestEmail
 			{
@@ -105,17 +103,15 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Tests
 			var dispatcher = new EmailChannelProviderDispatcher(options, client);
 
 			var extendedProperties = new ExtendedProperties();
-			_ = new EmailExtendedChannelProperties(extendedProperties)
-			{
-				Tags = ["alpha", "beta"],
-				Tracking = true,
-				TrackingClicks = false,
-				TrackingOpens = true,
-				TrackingPixelLocationTop = true,
-				RequireTls = true,
-				TestMode = true,
-				Properties = new Dictionary<string, string> { ["v:customer-id"] = "123" }
-			};
+			var mailgun = MailgunProperties(extendedProperties);
+			mailgun.Tags = ["alpha", "beta"];
+			mailgun.Tracking = true;
+			mailgun.TrackingClicks = false;
+			mailgun.TrackingOpens = true;
+			mailgun.TrackingPixelLocationTop = true;
+			mailgun.RequireTls = true;
+			mailgun.TestMode = true;
+			mailgun.Properties = new Dictionary<string, string> { ["v:customer-id"] = "123" };
 
 			var email = new TestEmail
 			{
@@ -161,6 +157,65 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Tests
 		}
 
 		[TestMethod]
+		public async Task DispatchAsync_WithAmpTemplate_SendsAmpHtml()
+		{
+			// The AMP template is configured through one accessor and read back by the dispatcher through another.
+			var handler = new TestHttpMessageHandler { ResponseBody = "{\"id\":\"<test>\",\"message\":\"Queued\"}" };
+			var dispatcher = new EmailChannelProviderDispatcher(
+				new MailgunOptions { ApiKey = "key-test", SendingDomain = "mg.example.com", ApiHost = "https://api.mailgun.test" },
+				new HttpClient(handler));
+			var extendedProperties = new ExtendedProperties();
+			MailgunProperties(extendedProperties).AmpHtml.AddStringTemplate("<html amp4email></html>");
+			var email = new TestEmail
+			{
+				From = new PlatformIdentityAddress("from@example.com"),
+				To = [new PlatformIdentityAddress("to@example.com")],
+				Subject = "Hello",
+				HtmlBody = "<p>Hello</p>",
+				ExtendedProperties = extendedProperties
+			};
+
+			await dispatcher.DispatchAsync(email, new TestDispatchCommunicationContext(), CancellationToken.None);
+
+			var parts = MultipartFormDataParser.Parse(handler.CapturedContentType, handler.CapturedContent);
+			AssertFieldValue(parts, "amp-html", "amp-content");
+		}
+
+		[TestMethod]
+		public async Task DispatchAsync_WithAttachmentAndInlineImage_SendsBoth()
+		{
+			var handler = new TestHttpMessageHandler { ResponseBody = "{\"id\":\"<test>\",\"message\":\"Queued\"}" };
+			var dispatcher = new EmailChannelProviderDispatcher(
+				new MailgunOptions { ApiKey = "key-test", SendingDomain = "mg.example.com", ApiHost = "https://api.mailgun.test" },
+				new HttpClient(handler));
+			var email = new TestEmail
+			{
+				From = new PlatformIdentityAddress("from@example.com"),
+				To = [new PlatformIdentityAddress("to@example.com")],
+				Subject = "Statement",
+				HtmlBody = "<img src=\"cid:logo\"> Statement attached",
+				Attachments = [new TestEmailAttachment("statement.txt", "text/plain", new MemoryStream(Encoding.UTF8.GetBytes("statement")))]
+			};
+			var logo = new LinkedResource("cid:logo", new MemoryStream(Encoding.UTF8.GetBytes("png-bytes"))) { ContentType = "image/png" };
+			var context = new TestDispatchCommunicationContext(new TestContentModel(new { }, logo));
+
+			// Sent twice: each recipient's email reuses the same resource streams.
+			await dispatcher.DispatchAsync(email, context, CancellationToken.None);
+			await dispatcher.DispatchAsync(email, context, CancellationToken.None);
+
+			var parts = MultipartFormDataParser.Parse(handler.CapturedContentType, handler.CapturedContent);
+			var attachment = parts.Single(part => part.Name == "attachment");
+			Assert.AreEqual("statement.txt", attachment.FileName);
+			Assert.AreEqual("statement", attachment.Body);
+
+			// Mailgun matches cid:logo against the inline file's name.
+			var inline = parts.Single(part => part.Name == "inline");
+			Assert.AreEqual("logo", inline.FileName);
+			Assert.AreEqual("png-bytes", inline.Body);
+			StringAssert.StartsWith(inline.Headers["Content-Type"], "image/png");
+		}
+
+		[TestMethod]
 		public async Task DispatchAsync_WithDkimAndSendingIp_SendsExpectedFields()
 		{
 			var handler = new TestHttpMessageHandler
@@ -178,13 +233,11 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Tests
 			var dispatcher = new EmailChannelProviderDispatcher(options, client);
 
 			var extendedProperties = new ExtendedProperties();
-			_ = new EmailExtendedChannelProperties(extendedProperties)
-			{
-				DKIMSignatures = true,
-				SecondaryDKIM = "secondary-dkim",
-				PublicSecondaryDKIM = "public-secondary-dkim",
-				SendingIp = "192.168.1.10"
-			};
+			var mailgun = MailgunProperties(extendedProperties);
+			mailgun.DKIMSignatures = true;
+			mailgun.SecondaryDKIM = "secondary-dkim";
+			mailgun.PublicSecondaryDKIM = "public-secondary-dkim";
+			mailgun.SendingIp = "192.168.1.10";
 
 			var email = new TestEmail
 			{
@@ -268,6 +321,10 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Tests
 		{
 			return [.. parts.Where(part => part.Name == name).Select(part => part.Body)];
 		}
+
+		// Mailgun settings live on the email's extended properties; reach them the way a pipeline does.
+		private static IEmailExtendedChannelProperties MailgunProperties(IExtendedProperties extendedProperties) =>
+			new TestEmail { ExtendedProperties = extendedProperties }.Mailgun();
 
 		private sealed class TestEmail : IEmail
 		{
@@ -396,11 +453,11 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Tests
 			}
 		}
 
-		private sealed class TestContentModel(object model) : IContentModel
+		private sealed class TestContentModel(object model, params LinkedResource[] linkedResources) : IContentModel
 		{
 			public object Model { get; } = model;
 			public IReadOnlyList<Resource> Resources { get; } = Array.Empty<Resource>();
-			public IReadOnlyList<LinkedResource> LinkedResources { get; } = Array.Empty<LinkedResource>();
+			public IReadOnlyList<LinkedResource> LinkedResources { get; } = linkedResources;
 		}
 
 		private sealed class TestHttpMessageHandler : HttpMessageHandler
@@ -466,7 +523,7 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Tests
 					var trimmed = part.Trim();
 					if (!trimmed.StartsWith("boundary=", StringComparison.OrdinalIgnoreCase))
 						continue;
-					return trimmed["boundary=".Length..].Trim();
+					return trimmed.Substring("boundary=".Length).Trim();
 				}
 
 				return null;
@@ -517,8 +574,8 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Tests
 					if (index <= 0)
 						continue;
 
-					var name = line[..index].Trim();
-					var value = line[(index + 1)..].Trim();
+					var name = line.Substring(0, index).Trim();
+					var value = line.Substring(index + 1).Trim();
 					headers[name] = value;
 				}
 
@@ -534,9 +591,9 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Tests
 					if (!trimmed.StartsWith(key + "=", StringComparison.OrdinalIgnoreCase))
 						continue;
 
-					var value = trimmed[(key.Length + 1)..].Trim();
-					if (value.Length >= 2 && value[0] == '\"' && value[^1] == '\"')
-						value = value[1..^1];
+					var value = trimmed.Substring(key.Length + 1).Trim();
+					if (value.Length >= 2 && value[0] == '\"' && value[value.Length - 1] == '\"')
+						value = value.Substring(1, value.Length - 2);
 
 					return value;
 				}

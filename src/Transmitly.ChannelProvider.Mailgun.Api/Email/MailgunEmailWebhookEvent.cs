@@ -307,7 +307,7 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Email
 			return offset.AddSeconds(fraction);
 		}
 
-		private static IReadOnlyCollection<string>? GetStringArray(JsonElement element, string propertyName)
+		private static List<string>? GetStringArray(JsonElement element, string propertyName)
 		{
 			if (element.ValueKind != JsonValueKind.Object)
 				return null;
@@ -330,7 +330,7 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Email
 			return list.Count == 0 ? null : list;
 		}
 
-		private static IReadOnlyDictionary<string, string?>? GetStringDictionary(JsonElement element, string propertyName)
+		private static Dictionary<string, string?>? GetStringDictionary(JsonElement element, string propertyName)
 		{
 			if (element.ValueKind != JsonValueKind.Object)
 				return null;
@@ -357,10 +357,7 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Email
 		{
 			return adaptorContext.GetQueryValue(key)
 				?? adaptorContext.GetFormValue(key)
-				?? adaptorContext.GetHeaderValue(key)
-#pragma warning disable CS0618
-				?? adaptorContext.GetValue(key);
-#pragma warning restore CS0618
+				?? adaptorContext.GetHeaderValue(key);
 		}
 
 		private static int? ParseInt(string? value)

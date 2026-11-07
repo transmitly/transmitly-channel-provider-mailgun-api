@@ -20,45 +20,43 @@ namespace Transmitly.ChannelProvider.Mailgun.Api.Email
 	{
 		public static DeliveryReport ApplyExtendedProperties(this DeliveryReport deliveryReport, MailgunEmailWebhookEvent report)
 		{
-			_ = new ExtendedEmailDeliveryReportProperties(deliveryReport)
-			{
-				Event = report.Event,
-				Id = report.Id,
-				Timestamp = report.Timestamp,
-				LogLevel = report.LogLevel,
-				Recipient = report.Recipient,
-				RecipientDomain = report.RecipientDomain,
-				MessageId = report.MessageId,
-				MessageTo = report.MessageTo,
-				MessageFrom = report.MessageFrom,
-				MessageSubject = report.MessageSubject,
-				MessageSize = report.MessageSize,
-				DeliveryStatusCode = report.DeliveryCode,
-				DeliveryStatusMessage = report.DeliveryMessage,
-				DeliveryStatusDescription = report.DeliveryDescription,
-				DeliveryStatusReason = report.DeliveryReason,
-				DeliveryStatusMxHost = report.DeliveryMxHost,
-				DeliveryStatusTls = report.DeliveryTls,
-				DeliveryStatusUtf8 = report.DeliveryUtf8,
-				DeliveryStatusAttemptNo = report.DeliveryAttemptNo,
-				DeliveryStatusSessionSeconds = report.DeliverySessionSeconds,
-				DeliveryStatusCertificateVerified = report.DeliveryCertificateVerified,
-				FlagIsRouted = report.FlagIsRouted,
-				FlagIsAuthenticated = report.FlagIsAuthenticated,
-				FlagIsSystemTest = report.FlagIsSystemTest,
-				FlagIsTestMode = report.FlagIsTestMode,
-				EnvelopeTransport = report.EnvelopeTransport,
-				EnvelopeSender = report.EnvelopeSender,
-				EnvelopeSendingIp = report.EnvelopeSendingIp,
-				EnvelopeTargets = report.EnvelopeTargets,
-				StorageUrl = report.StorageUrl,
-				StorageKey = report.StorageKey,
-				Tags = report.Tags,
-				UserVariables = report.UserVariables,
-				SignatureToken = report.SignatureToken,
-				SignatureTimestamp = report.SignatureTimestamp,
-				SignatureValue = report.SignatureValue
-			};
+			var email = deliveryReport.Mailgun().Email;
+			email.Event = report.Event;
+			email.Id = report.Id;
+			email.Timestamp = report.Timestamp;
+			email.LogLevel = report.LogLevel;
+			email.Recipient = report.Recipient;
+			email.RecipientDomain = report.RecipientDomain;
+			email.MessageId = report.MessageId;
+			email.MessageTo = report.MessageTo;
+			email.MessageFrom = report.MessageFrom;
+			email.MessageSubject = report.MessageSubject;
+			email.MessageSize = report.MessageSize;
+			email.DeliveryStatusCode = report.DeliveryCode;
+			email.DeliveryStatusMessage = report.DeliveryMessage;
+			email.DeliveryStatusDescription = report.DeliveryDescription;
+			email.DeliveryStatusReason = report.DeliveryReason;
+			email.DeliveryStatusMxHost = report.DeliveryMxHost;
+			email.DeliveryStatusTls = report.DeliveryTls;
+			email.DeliveryStatusUtf8 = report.DeliveryUtf8;
+			email.DeliveryStatusAttemptNo = report.DeliveryAttemptNo;
+			email.DeliveryStatusSessionSeconds = report.DeliverySessionSeconds;
+			email.DeliveryStatusCertificateVerified = report.DeliveryCertificateVerified;
+			email.FlagIsRouted = report.FlagIsRouted;
+			email.FlagIsAuthenticated = report.FlagIsAuthenticated;
+			email.FlagIsSystemTest = report.FlagIsSystemTest;
+			email.FlagIsTestMode = report.FlagIsTestMode;
+			email.EnvelopeTransport = report.EnvelopeTransport;
+			email.EnvelopeSender = report.EnvelopeSender;
+			email.EnvelopeSendingIp = report.EnvelopeSendingIp;
+			email.EnvelopeTargets = report.EnvelopeTargets;
+			email.StorageUrl = report.StorageUrl;
+			email.StorageKey = report.StorageKey;
+			email.Tags = report.Tags;
+			email.UserVariables = report.UserVariables;
+			email.SignatureToken = report.SignatureToken;
+			email.SignatureTimestamp = report.SignatureTimestamp;
+			email.SignatureValue = report.SignatureValue;
 
 			return deliveryReport;
 		}

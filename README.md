@@ -12,16 +12,12 @@ That package registers this API implementation for you.
 
 ## What This Package Provides
 
-- `EmailChannelProviderDispatcher` for the `Email` channel.
-- `EmailDeliveryStatusReportAdaptor` for Mailgun webhook payloads.
-- `EmailExtendedChannelProperties` for Mailgun-specific email settings.
-- `DeliveryReportExtendedProperties` for Mailgun-specific delivery-report access.
+- Mailgun-specific settings (`email.Mailgun()`) and delivery-report values (`report.Mailgun()`)
 
 ## Using This Package Directly (Advanced)
 
 ```csharp
 using Transmitly;
-using Transmitly.ChannelProvider.Mailgun.Api;
 using Transmitly.ChannelProvider.Mailgun.Api.Email;
 using Transmitly.ChannelProvider.Mailgun.Configuration;
 
@@ -36,9 +32,7 @@ var options = new MailgunOptions
 builder.ChannelProvider
 	.Build(Id.ChannelProvider.Mailgun(), options)
 	.AddDispatcher<EmailChannelProviderDispatcher, IEmail>(Id.Channel.Email())
-	.AddEmailExtendedPropertiesAdaptor<EmailExtendedChannelProperties>()
 	.AddDeliveryReportRequestAdaptor<EmailDeliveryStatusReportAdaptor>()
-	.AddDeliveryReportExtendedPropertiesAdaptor<DeliveryReportExtendedProperties>()
 	.Register();
 ```
 
